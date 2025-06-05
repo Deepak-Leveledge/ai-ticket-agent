@@ -5,6 +5,7 @@ import { sendMail } from "../../utils/mailer";
 import Ticket from "../models/ticket.js";
 import analyzeTicket from "../../utils/ai.js";
 import { assign } from "nodemailer/lib/shared/index.js";
+import { captureRejectionSymbol } from "nodemailer/lib/xoauth2/index.js";
 
 
 export const onTicketCreated= inngest.createFunction(
@@ -71,14 +72,18 @@ export const onTicketCreated= inngest.createFunction(
             )
             await set.run("send-email-notification"),async ()=>{
                 if(moderator){
-                    await sendMail(moderator.email,"New ticket created",`A new ticket has been created and assigned to you. Please review and take appropriate actions.`)
+                    const finalTicket=await Ticket.findbyId(ticket._id)
+                    await sendMail(moderator.email,"New ticket created",`A new ticket has been created and assigned to you. Please review and take appropriate actions.
+                        ${finalTicket.title}`)
                 }
             }
+            return {success:true}
            
 
 
         }catch (error){
-            res
+            console.error("Error running the ticket-created function",error.message)
+            return {success:false}
         }
     }
 
