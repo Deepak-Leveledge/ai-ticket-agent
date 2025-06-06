@@ -1,8 +1,8 @@
 import brcypt from "bcrypt"
 import User from "../models/user.js"
 import jwt from "jsonwebtoken"
-import { Inngest } from "inngest"
-
+import pkg from 'inngest';
+const { inngest } = pkg;
 
 export const signup=async(req,res)=>{
     const{email,password,skills=[]}=req.body
@@ -67,11 +67,55 @@ export const login=async(req,res)=>{
 
 export const logout=async(req,res)=>{
     try{
-        req.header.authorization.split(" ")[1]
-
+        const token=req.headers.authorization.split(" ")[1]
+        if(!token) return res.status(401).json({error:"Unauthorized"})
+        
+        jwt.verify(token,process.env.JWT_SECRET,(err,decoded)=>{
+            if(err) return res.status(401).json({error:"Unauthorized"})
+        })
+            // res.json({message:"Logout successful"})
     }catch(error){
         res.status(500).json({error:"Logout failed",
             details:error.message
         })
+    }
+}
+
+
+export const Updateuser= async(req, res)=>{
+    const{skills=[], role, email}= req.body;
+    try{
+        if (req.user?.role!=="admin"){
+            return res.status(401).json({error:"Forbidden"})
+
+        }
+        const user=await User.findOne({email})
+        if (!user) return res.status(401).json({error:"User not found"});
+
+
+        await User.updateOne({email},{skills:skills.length ? skills: user.skills,role})
+        return res.json({message:"User updated successfully"})
+
+    }catch(error){
+        res.status(500).json({error:"Update user failed",
+            details:error.message
+        })
+    }
+}
+
+
+export  const getuser= async(req, res)=>{
+    try{
+        if(req.user.role!=="admin"){
+            return res.status(401).json({error:"Forbidden"})
+        }
+
+        const user = await User.find().select('-password');
+        return res.json({user})
+
+
+    }catch(error){
+        res.status(500).json({error:"Get user failed",
+            details:error.message})
     }
 }
